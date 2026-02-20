@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI改变人物动作</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding-bottom: 20px;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 15px;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 导航链接 */
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 内容卡片 */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* 上传区域 */
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #f5576c;
+            background: #fff0f3;
+        }
+
+        .upload-area.dragover {
+            border-color: #f5576c;
+            background: #ffe8ec;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* 文件预览 */
+        .file-preview {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .file-preview.show {
+            display: block;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            font-size: 32px;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .file-remove {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: #ff4757;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 提示词输入 */
+        .prompt-area {
+            margin-top: 10px;
+        }
+
+        .prompt-label {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .prompt-hint {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .prompt-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .prompt-examples {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .prompt-example {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-example:hover {
+            background: #f5576c;
+            color: white;
+        }
+
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 进度区域 */
+        .progress-area {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .progress-area.show {
+            display: block;
+        }
+
+        .progress-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #f5576c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-text {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .progress-status {
+            font-size: 12px;
+            color: #f5576c;
+        }
+
+        /* 结果区域 */
+        .result-area {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result-area.show {
+            display: block;
+        }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .result-preview {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-download {
+            flex: 1;
+            padding: 10px;
+            background: #f5576c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        /* 提示信息 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: #ff4757;
+        }
+
+        .toast.success {
+            background: #2ed573;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>💃 AI改变人物动作</h1>
+            <p>上传人物照片，通过提示词改变人物动作和姿态</p>
+        </div>
+
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="/" class="nav-link">← 返回去水印</a>
+        </div>
+
+        <!-- 上传原图 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🖼️</div>
+                上传原图（图1）
+            </div>
+
+            <div class="upload-area" id="source-image-upload">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">点击或拖拽上传原图</div>
+                <div class="upload-hint">支持 PNG, JPG, JPEG 格式</div>
+            </div>
+            <input type="file" class="file-input" id="source-image-input" accept="image/*">
+
+            <div class="file-preview" id="source-image-preview">
+                <img class="preview-image" id="source-preview-img" src="" alt="预览">
+                <div class="file-info">
+                    <div class="file-icon">🖼️</div>
+                    <div class="file-details">
+                        <div class="file-name" id="source-image-filename"></div>
+                        <div class="file-size" id="source-image-filesize"></div>
+                    </div>
+                    <button class="file-remove" id="source-image-remove">×</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 上传姿势参考图 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🧍</div>
+                上传姿势参考图（图2）
+            </div>
+
+            <div class="upload-area" id="pose-image-upload">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">点击或拖拽上传姿势参考图</div>
+                <div class="upload-hint">支持 PNG, JPG, JPEG 格式</div>
+            </div>
+            <input type="file" class="file-input" id="pose-image-input" accept="image/*">
+
+            <div class="file-preview" id="pose-image-preview">
+                <img class="preview-image" id="pose-preview-img" src="" alt="预览">
+                <div class="file-info">
+                    <div class="file-icon">🧍</div>
+                    <div class="file-details">
+                        <div class="file-name" id="pose-image-filename"></div>
+                        <div class="file-size" id="pose-image-filesize"></div>
+                    </div>
+                    <button class="file-remove" id="pose-image-remove">×</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提示词1输入 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">✏️</div>
+                输入提示词1（主要描述）
+            </div>
+
+            <div class="prompt-area">
+                <label class="prompt-label">描述你想要的人物动作和服装变化</label>
+                <div class="prompt-hint">
+                    默认提示词会将图1的人物换成图2的姿势。你可以修改描述来改变服装等细节。
+                </div>
+                <textarea
+                    class="prompt-input"
+                    id="prompt1-input"
+                    placeholder="例如：图1中的人物换成图2的姿势，衣服换成比基尼"
+                >图1中的人物换成图2的姿势，衣服换成比基尼</textarea>
+                <div class="prompt-examples">
+                    <span class="prompt-example" data-target="prompt1-input" data-prompt="图1中的人物换成图2的姿势，衣服换成比基尼">👙 比基尼</span>
+                    <span class="prompt-example" data-target="prompt1-input" data-prompt="图1中的人物换成图2的姿势，衣服换成晚礼服">👗 晚礼服</span>
+                    <span class="prompt-example" data-target="prompt1-input" data-prompt="图1中的人物换成图2的姿势，衣服换成运动装">👟 运动装</span>
+                    <span class="prompt-example" data-target="prompt1-input" data-prompt="图1中的人物换成图2的姿势，衣服换成休闲装">👕 休闲装</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提示词2输入 -->
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🎨</div>
+                输入提示词2（姿势描述）
+            </div>
+
+            <div class="prompt-area">
+                <label class="prompt-label">姿势描述提示词</label>
+                <div class="prompt-hint">
+                    用于指导AI如何描述姿势参考图中的姿势。一般不需要修改。
+                </div>
+                <textarea
+                    class="prompt-input"
+                    id="prompt2-input"
+                    placeholder="例如：帮我描述图片中人物的姿势和朝向..."
+                >帮我描述图片中人物的姿势和朝向，只需要描述姿势和朝向，其他关于背景和人物信息一律不要描述，最后结果不带任何解释性文字，最后格式按照以下输出：双腿交叉坐在地上，双手撑地，头微微偏向一侧。</textarea>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="submit-btn" disabled>
+            开始生成
+        </button>
+
+        <!-- 查询历史任务 -->
+        <div class="card" style="margin-top: 20px; background: #f8f9fa;">
+            <div class="card-title">
+                <div class="icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔍</div>
+                查询历史任务
+            </div>
+            <div class="prompt-area">
+                <label class="prompt-label">已有任务ID？输入任务ID查询结果</label>
+                <div style="display: flex; gap: 10px;">
+                    <input
+                        type="text"
+                        class="prompt-input"
+                        id="task-id-input"
+                        placeholder="请输入任务ID，例如：1904152026220003329"
+                        style="min-height: 44px; flex: 1;"
+                    >
+                    <button class="btn btn-primary" id="query-task-btn" style="margin-top: 0; width: auto; padding: 12px 24px;">
+                        查询
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-area" id="progress-area">
+            <div class="progress-spinner"></div>
+            <div class="progress-text">正在处理中...</div>
+            <div class="progress-status" id="progress-status">准备上传</div>
+        </div>
+
+        <div class="result-area" id="result-area">
+            <div class="result-title">✅ 处理完成</div>
+            <div id="result-list"></div>
+        </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 全局变量
+        let selectedSourceImageFile = null;
+        let selectedPoseImageFile = null;
+        let currentTaskId = null;
+
+        // DOM元素
+        const toast = document.getElementById('toast');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initSourceImageUpload();
+            initPoseImageUpload();
+            initPromptExamples();
+            initSubmit();
+            initQueryTask();
+            loadWorkflowPrompts(); // 加载工作流默认提示词
+        });
+
+        // 从服务器加载工作流默认提示词
+        async function loadWorkflowPrompts() {
+            try {
+                const response = await fetch('/api/get_workflow_prompts');
+                const result = await response.json();
+
+                if (result.code === 0 && result.data) {
+                    const prompt1Input = document.getElementById('prompt1-input');
+                    const prompt2Input = document.getElementById('prompt2-input');
+
+                    if (result.data.prompt1 && prompt1Input) {
+                        prompt1Input.value = result.data.prompt1;
+                    }
+                    if (result.data.prompt2 && prompt2Input) {
+                        prompt2Input.value = result.data.prompt2;
+                    }
+
+                    console.log('已加载工作流默认提示词:', result.data);
+                }
+            } catch (error) {
+                console.error('加载工作流提示词失败:', error);
+                // 失败时使用HTML中的默认值
+            }
+        }
+
+        // 原图上传
+        function initSourceImageUpload() {
+            const uploadArea = document.getElementById('source-image-upload');
+            const fileInput = document.getElementById('source-image-input');
+            const preview = document.getElementById('source-image-preview');
+            const previewImg = document.getElementById('source-preview-img');
+            const filename = document.getElementById('source-image-filename');
+            const filesize = document.getElementById('source-image-filesize');
+            const removeBtn = document.getElementById('source-image-remove');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleSourceImageFile(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleSourceImageFile(e.target.files[0]);
+                }
+            });
+
+            removeBtn.addEventListener('click', () => {
+                selectedSourceImageFile = null;
+                fileInput.value = '';
+                preview.classList.remove('show');
+                uploadArea.style.display = 'block';
+                updateSubmitButton();
+            });
+
+            function handleSourceImageFile(file) {
+                const allowedExts = ['png', 'jpg', 'jpeg'];
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                if (!allowedExts.includes(ext)) {
+                    showToast('不支持的文件类型，请上传 PNG 或 JPG 图片', 'error');
+                    return;
+                }
+
+                selectedSourceImageFile = file;
+                filename.textContent = file.name;
+                filesize.textContent = formatFileSize(file.size);
+
+                // 显示图片预览
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                preview.classList.add('show');
+                uploadArea.style.display = 'none';
+                updateSubmitButton();
+            }
+        }
+
+        // 姿势参考图上传
+        function initPoseImageUpload() {
+            const uploadArea = document.getElementById('pose-image-upload');
+            const fileInput = document.getElementById('pose-image-input');
+            const preview = document.getElementById('pose-image-preview');
+            const previewImg = document.getElementById('pose-preview-img');
+            const filename = document.getElementById('pose-image-filename');
+            const filesize = document.getElementById('pose-image-filesize');
+            const removeBtn = document.getElementById('pose-image-remove');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handlePoseImageFile(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handlePoseImageFile(e.target.files[0]);
+                }
+            });
+
+            removeBtn.addEventListener('click', () => {
+                selectedPoseImageFile = null;
+                fileInput.value = '';
+                preview.classList.remove('show');
+                uploadArea.style.display = 'block';
+                updateSubmitButton();
+            });
+
+            function handlePoseImageFile(file) {
+                const allowedExts = ['png', 'jpg', 'jpeg'];
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                if (!allowedExts.includes(ext)) {
+                    showToast('不支持的文件类型，请上传 PNG 或 JPG 图片', 'error');
+                    return;
+                }
+
+                selectedPoseImageFile = file;
+                filename.textContent = file.name;
+                filesize.textContent = formatFileSize(file.size);
+
+                // 显示图片预览
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                preview.classList.add('show');
+                uploadArea.style.display = 'none';
+                updateSubmitButton();
+            }
+        }
+
+        // 提示词示例
+        function initPromptExamples() {
+            const examples = document.querySelectorAll('.prompt-example');
+
+            examples.forEach(example => {
+                example.addEventListener('click', () => {
+                    const targetId = example.dataset.target;
+                    const promptInput = document.getElementById(targetId);
+                    if (promptInput) {
+                        promptInput.value = example.dataset.prompt;
+                        updateSubmitButton();
+                    }
+                });
+            });
+
+            document.getElementById('prompt1-input').addEventListener('input', updateSubmitButton);
+            document.getElementById('prompt2-input').addEventListener('input', updateSubmitButton);
+        }
+
+        // 更新提交按钮状态
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submit-btn');
+            const prompt1Input = document.getElementById('prompt1-input');
+            const hasSourceFile = selectedSourceImageFile !== null;
+            const hasPoseFile = selectedPoseImageFile !== null;
+            const hasPrompt1 = prompt1Input.value.trim().length > 0;
+            submitBtn.disabled = !(hasSourceFile && hasPoseFile && hasPrompt1);
+        }
+
+        // 提交按钮
+        function initSubmit() {
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.addEventListener('click', processImage);
+        }
+
+        // 查询历史任务按钮
+        function initQueryTask() {
+            const queryBtn = document.getElementById('query-task-btn');
+            const taskIdInput = document.getElementById('task-id-input');
+
+            queryBtn.addEventListener('click', async () => {
+                const taskId = taskIdInput.value.trim();
+                if (!taskId) {
+                    showToast('请输入任务ID', 'error');
+                    return;
+                }
+
+                await queryExistingTask(taskId);
+            });
+
+            // 支持回车键查询
+            taskIdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    queryBtn.click();
+                }
+            });
+        }
+
+        // 查询已有任务
+        async function queryExistingTask(taskId) {
+            const progressArea = document.getElementById('progress-area');
+            const statusText = document.getElementById('progress-status');
+            const resultArea = document.getElementById('result-area');
+            const queryBtn = document.getElementById('query-task-btn');
+
+            queryBtn.disabled = true;
+            progressArea.classList.add('show');
+            resultArea.classList.remove('show');
+
+            try {
+                // 1. 先查询任务状态
+                statusText.textContent = '正在查询任务状态...';
+                const statusResult = await queryStatus(taskId);
+
+                if (statusResult.code !== 0) {
+                    throw new Error(statusResult.msg || '查询任务状态失败');
+                }
+
+                const status = statusResult.data;
+                console.log(`[queryExistingTask] 任务状态: ${status}`);
+
+                if (status === 'SUCCESS') {
+                    // 任务已完成，直接获取结果
+                    statusText.textContent = '任务已完成，正在获取结果...';
+                    const outputsResult = await getOutputs(taskId);
+
+                    if (outputsResult.code !== 0) {
+                        throw new Error(outputsResult.msg || '获取结果失败');
+                    }
+
+                    progressArea.classList.remove('show');
+                    displayResults(outputsResult.data);
+                    resultArea.classList.add('show');
+                    showToast('结果获取成功', 'success');
+                } else if (status === 'FAILED') {
+                    throw new Error('任务执行失败');
+                } else if (status === 'QUEUED' || status === 'RUNNING' || status === 'CREATE') {
+                    // 任务还在进行中，开始轮询
+                    statusText.textContent = `任务${getStatusText(status)}，继续等待...`;
+                    const outputs = await pollTaskStatus(taskId, (s) => {
+                        statusText.textContent = `任务状态: ${getStatusText(s)}`;
+                    });
+
+                    progressArea.classList.remove('show');
+                    displayResults(outputs);
+                    resultArea.classList.add('show');
+                    showToast('处理完成', 'success');
+                } else {
+                    throw new Error(`未知任务状态: ${status}`);
+                }
+
+            } catch (error) {
+                progressArea.classList.remove('show');
+                showToast(error.message || '查询失败', 'error');
+                console.error(error);
+            } finally {
+                queryBtn.disabled = false;
+            }
+        }
+
+        // 处理图片
+        async function processImage() {
+            const progressArea = document.getElementById('progress-area');
+            const statusText = document.getElementById('progress-status');
+            const resultArea = document.getElementById('result-area');
+            const submitBtn = document.getElementById('submit-btn');
+            const prompt1Input = document.getElementById('prompt1-input');
+            const prompt2Input = document.getElementById('prompt2-input');
+
+            submitBtn.disabled = true;
+            progressArea.classList.add('show');
+            resultArea.classList.remove('show');
+
+            try {
+                // 1. 上传原图
+                statusText.textContent = '正在上传原图...';
+                const sourceUploadResult = await uploadFile(selectedSourceImageFile, 'image');
+
+                if (sourceUploadResult.code !== 0) {
+                    throw new Error(sourceUploadResult.msg || '原图上传失败');
+                }
+
+                const sourceFileName = sourceUploadResult.data.fileName;
+                showToast('原图上传成功', 'success');
+
+                // 2. 上传姿势参考图
+                statusText.textContent = '正在上传姿势参考图...';
+                const poseUploadResult = await uploadFile(selectedPoseImageFile, 'image');
+
+                if (poseUploadResult.code !== 0) {
+                    throw new Error(poseUploadResult.msg || '姿势参考图上传失败');
+                }
+
+                const poseFileName = poseUploadResult.data.fileName;
+                showToast('姿势参考图上传成功', 'success');
+
+                // 3. 创建任务
+                statusText.textContent = '正在创建任务...';
+                const prompt1 = prompt1Input.value.trim();
+                const prompt2 = prompt2Input.value.trim();
+                const taskResult = await createPoseTask(sourceFileName, poseFileName, prompt1, prompt2);
+
+                if (taskResult.code !== 0) {
+                    throw new Error(taskResult.msg || '创建任务失败');
+                }
+
+                currentTaskId = taskResult.data.taskId;
+                showToast('任务创建成功', 'success');
+
+                // 4. 轮询状态
+                statusText.textContent = '正在处理中...';
+                const outputs = await pollTaskStatus(currentTaskId, (status) => {
+                    statusText.textContent = `任务状态: ${getStatusText(status)}`;
+                });
+
+                // 5. 显示结果
+                progressArea.classList.remove('show');
+                displayResults(outputs);
+                resultArea.classList.add('show');
+                showToast('处理完成', 'success');
+
+            } catch (error) {
+                progressArea.classList.remove('show');
+                submitBtn.disabled = false;
+                showToast(error.message || '处理失败', 'error');
+                console.error(error);
+            }
+        }
+
+        // API调用
+        async function uploadFile(file, type) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            return await response.json();
+        }
+
+        async function createPoseTask(sourceFileName, poseFileName, prompt1, prompt2) {
+            const response = await fetch('/api/create_pose_task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceFileName, poseFileName, prompt1, prompt2 })
+            });
+
+            return await response.json();
+        }
+
+        async function queryStatus(taskId) {
+            const response = await fetch('/api/query_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId })
+            });
+
+            return await response.json();
+        }
+
+        async function getOutputs(taskId) {
+            const response = await fetch('/api/get_outputs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId })
+            });
+
+            return await response.json();
+        }
+
+        // 轮询任务状态
+        async function pollTaskStatus(taskId, onStatusChange) {
+            const maxRetries = 60;
+            const interval = 5000; // 5秒
+
+            for (let i = 0; i < maxRetries; i++) {
+                const result = await queryStatus(taskId);
+
+                if (result.code !== 0) {
+                    throw new Error(result.msg || '查询状态失败');
+                }
+
+                const status = result.data;
+                onStatusChange(status);
+
+                if (status === 'SUCCESS') {
+                    const outputsResult = await getOutputs(taskId);
+                    if (outputsResult.code === 0) {
+                        return outputsResult.data;
+                    }
+                    throw new Error('获取输出失败');
+                } else if (status === 'FAILED') {
+                    throw new Error('任务执行失败');
+                }
+
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+
+            throw new Error('处理超时');
+        }
+
+        // 显示结果
+        function displayResults(outputs) {
+            console.log('[displayResults] 接收到的数据:', outputs);
+            const container = document.getElementById('result-list');
+            container.innerHTML = '';
+
+            if (!outputs || outputs.length === 0) {
+                console.log('[displayResults] 没有输出数据');
+                container.innerHTML = '<div style="text-align: center; color: #999;">没有生成结果</div>';
+                return;
+            }
+
+            outputs.forEach((item, index) => {
+                console.log(`[displayResults] 处理第 ${index + 1} 个结果:`, item);
+                const div = document.createElement('div');
+                div.className = 'result-item';
+
+                const localUrl = item.localUrl || item.fileUrl;
+                console.log(`[displayResults] 使用 URL: ${localUrl}`);
+
+                div.innerHTML = `
+                    <img class="result-preview" src="${localUrl}" alt="结果${index + 1}" onerror="this.src='${item.fileUrl}'">
+                    <div class="result-actions">
+                        <a href="${localUrl}" download class="btn-download">下载图片</a>
+                    </div>
+                `;
+
+                container.appendChild(div);
+            });
+
+            document.getElementById('submit-btn').disabled = false;
+        }
+
+        // 工具函数
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'CREATE': '创建中',
+                'QUEUED': '排队中',
+                'RUNNING': '处理中',
+                'SUCCESS': '完成',
+                'FAILED': '失败'
+            };
+            return statusMap[status] || status;
+        }
+
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
